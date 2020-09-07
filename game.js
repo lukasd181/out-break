@@ -1,163 +1,241 @@
-/*
-  Code modified from:
-  http://www.lostdecadegames.com/how-to-make-a-simple-html5-canvas-game/
-  using graphics purchased from vectorstock.com
-*/
+var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+var ballX = canvas.width / 2;
+var ballY = canvas.height - 30;
+var dx = 2;
+var dy = -2;
+var ballRadius = 10;
+var paddleHeight = 10;
+var paddleWidth = 75;
+var paddleX = (canvas.width - paddleWidth) / 2;
+var rightPressed = false;
+var leftPressed = false;
+var brickRowCount = 3;
+var brickColumnCount = 5;
+var brickWidth = 75;
+var brickHeight = 20;
+var brickPadding = 10;
+var brickOffsetTop = 30;
+var brickOffsetLeft = 30;
+var score = 0;
+var round = 0;
+var lives = 2;
+var loop;
+var scoreboard = [];
 
-/* Initialization.
-Here, we create and add our "canvas" to the page.
-We also load all of our images. 
-*/
-
-
-let canvas;
-let ctx;
-
-canvas = document.createElement("canvas");
-ctx = canvas.getContext("2d");
-canvas.width = 512;
-canvas.height = 480;
-document.body.appendChild(canvas);
-
-let bgReady, heroReady, monsterReady;
-let bgImage, heroImage, monsterImage;
-
-let startTime = Date.now();
-const SECONDS_PER_ROUND = 30;
-let elapsedTime = 0;
-
-function loadImages() {
-  bgImage = new Image();
-  bgImage.onload = function () {
-    // show the background image
-    bgReady = true;
-  };
-  bgImage.src = "images/background.png";
-  heroImage = new Image();
-  heroImage.onload = function () {
-    // show the hero image
-    heroReady = true;
-  };
-  heroImage.src = "images/hero.png";
-
-  monsterImage = new Image();
-  monsterImage.onload = function () {
-    // show the monster image
-    monsterReady = true;
-  };
-  monsterImage.src = "images/monster.png";
+var bricks = [];
+for (var c = 0; c < brickColumnCount; c++) {
+  bricks[c] = [];
+  for (var r = 0; r < brickRowCount; r++) {
+    bricks[c][r] = { x: 0, y: 0, status: 1 };
+  }
 }
 
-/** 
- * Setting up our characters.
- * 
- * Note that heroX represents the X position of our hero.
- * heroY represents the Y position.
- * We'll need these values to know where to "draw" the hero.
- * 
- * The same applies to the monster.
- */
+document.addEventListener("keydown", keyDownHandler);
+document.addEventListener("keyup", keyUpHandler);
 
-let heroX = canvas.width / 2;
-let heroY = canvas.height / 2;
+function keyDownHandler(e) {
+  if (e.key == "Right" || e.key == "ArrowRight") {
+    rightPressed = true;
+  }
 
-let monsterX = 100;
-let monsterY = 100;
-
-/** 
- * Keyboard Listeners
- * You can safely ignore this part, for now. 
- * 
- * This is just to let JavaScript know when the user has pressed a key.
-*/
-let keysDown = {};
-function setupKeyboardListeners() {
-  // Check for keys pressed where key represents the keycode captured
-  // For now, do not worry too much about what's happening here. 
-  addEventListener("keydown", function (key) {
-    keysDown[key.keyCode] = true;
-  }, false);
-
-  addEventListener("keyup", function (key) {
-    delete keysDown[key.keyCode];
-  }, false);
+  if (e.key == "Left" || e.key == "ArrowLeft") {
+    leftPressed = true;
+  }
 }
 
-
-/**
- *  Update game objects - change player position based on key pressed
- *  and check to see if the monster has been caught!
- *  
- *  If you change the value of 5, the player will move at a different rate.
- */
-let update = function () {
-  // Update the time.
-  elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-
-
-  if (38 in keysDown) { // Player is holding up key
-    heroY -= 5;
-  }
-  if (40 in keysDown) { // Player is holding down key
-    heroY += 5;
-  }
-  if (37 in keysDown) { // Player is holding left key
-    heroX -= 5;
-  }
-  if (39 in keysDown) { // Player is holding right key
-    heroX += 5;
+function keyUpHandler(e) {
+  if (e.key == "Right" || e.key == "ArrowRight") {
+    rightPressed = false;
   }
 
-  // Check if player and monster collided. Our images
-  // are about 32 pixels big.
-  if (
-    heroX <= (monsterX + 32)
-    && monsterX <= (heroX + 32)
-    && heroY <= (monsterY + 32)
-    && monsterY <= (heroY + 32)
-  ) {
-    // Pick a new location for the monster.
-    // Note: Change this to place the monster at a new, random location.
-    monsterX = monsterX + 50;
-    monsterY = monsterY + 70;
+  if (e.key == "Left" || e.key == "ArrowLeft") {
+    leftPressed = false;
   }
-};
+}
 
-/**
- * This function, render, runs as often as possible.
- */
-var render = function () {
-  if (bgReady) {
-    ctx.drawImage(bgImage, 0, 0);
-  }
-  if (heroReady) {
-    ctx.drawImage(heroImage, heroX, heroY);
-  }
-  if (monsterReady) {
-    ctx.drawImage(monsterImage, monsterX, monsterY);
-  }
-  ctx.fillText(`Seconds Remaining: ${SECONDS_PER_ROUND - elapsedTime}`, 20, 100);
-};
+function drawLive() {
+  ctx.font = "16px Arial";
+  ctx.fillStyle = "#0095DD";
+  ctx.fillText("Lives: " + lives, 200, 20);
+}
 
-/**
- * The main game loop. Most every game will have two distinct parts:
- * update (updates the state of the game, in this case our hero and monster)
- * render (based on the state of our game, draw the right things)
- */
-var main = function () {
-  update(); 
-  render();
-  // Request to do this again ASAP. This is a special method
-  // for web browsers. 
+function drawRound() {
+  ctx.font = "16px Arial";
+  ctx.fillStyle = "#0095DD";
+  ctx.fillText("Round: " + round, 100, 20);
+}
+
+function drawScore() {
+  ctx.font = "16px Arial";
+  ctx.fillStyle = "#0095DD";
+  ctx.fillText("Score: " + score, 8, 20);
+}
+
+function drawBall() {
+  ctx.beginPath();
+  ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+  ctx.fillStyle = "#0095DD";
+  ctx.fill();
+  ctx.closePath();
+}
+
+function drawPaddle() {
+  ctx.beginPath();
+  ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+  ctx.fillStyle = "#0095DD";
+  ctx.fill();
+  ctx.closePath();
+}
+
+function drawBricks() {
+  for (var c = 0; c < brickColumnCount; c++) {
+    for (var r = 0; r < brickRowCount; r++) {
+      if (bricks[c][r].status == 1) {
+        var brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+        var brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+        bricks[c][r].x = brickX;
+        bricks[c][r].y = brickY;
+        ctx.beginPath();
+        ctx.rect(brickX, brickY, brickWidth, brickHeight);
+        ctx.fillStyle = "#0095DD";
+        ctx.fill();
+        ctx.closePath();
+      }
+    }
+  }
+}
+
+function collisionDetection() {
+  for (var c = 0; c < brickColumnCount; c++) {
+    for (var r = 0; r < brickRowCount; r++) {
+      var b = bricks[c][r];
+      if (b.status == 1) {
+        if (
+          ballX > b.x &&
+          ballX < b.x + brickWidth &&
+          ballY > b.y &&
+          ballY < b.y + brickHeight
+        ) {
+          dy = -dy;
+          b.status = 0;
+          score++;
+          if (score == brickRowCount * brickColumnCount) {
+            alert("You Won!!!");
+            round++;
+            nextRound();
+          }
+        }
+      }
+    }
+  }
+}
+
+let gameOver = true;
+
+function draw() {
+  if (gameOver == true) {
+    console.log("inside of true", gameOver);
+    return;
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBricks();
+  drawBall();
+  drawPaddle();
+  drawScore();
+  drawRound();
+  drawLive();
+  collisionDetection();
+
+  if (rightPressed) {
+    paddleX += 7;
+  }
+
+  if (leftPressed) {
+    paddleX += -7;
+  }
+
+  if (paddleX + paddleWidth > canvas.width) {
+    paddleX = canvas.width - paddleWidth;
+  }
+
+  if (paddleX < 0) {
+    paddleX = 0;
+  }
+
+  if (ballX > canvas.width - ballRadius || ballX < ballRadius) {
+    dx = -dx;
+  }
+
+  if (ballY < ballRadius) {
+    dy = -dy;
+  } else if (ballY > canvas.height - ballRadius) {
+    if (ballX > paddleX && ballX < paddleX + paddleWidth) {
+      dy = -dy;
+    } else {
+      if (lives === 0) {
+        alert("Game Over!!!");
+        gameOver = true;
+      } else {
+        guardianAngel();
+      }
+    }
+  }
+
+  ballX += dx;
+  ballY += dy;
+  // loop = requestAnimationFrame(draw);
+}
+
+function guardianAngel() {
+  lives--;
+  ballX = canvas.width / 2;
+  ballY = canvas.height - 30;
+  dx = 2;
+  dy = -2;
+}
+
+function resetGame() {
+  gameOver = false;
+  score = 0;
+  round = 0;
+  for (var c = 0; c < brickColumnCount; c++) {
+    bricks[c] = [];
+    for (var r = 0; r < brickRowCount; r++) {
+      bricks[c][r] = { x: 0, y: 0, status: 1 };
+    }
+  }
+  drawBricks();
+  ballX = canvas.width / 2;
+  ballY = canvas.height - 30;
+  dx = 2;
+  dy = -2;
+  paddleX = (canvas.width - paddleWidth) / 2;
+}
+
+function nextRound() {
+  for (var c = 0; c < brickColumnCount; c++) {
+    bricks[c] = [];
+    for (var r = 0; r < brickRowCount; r++) {
+      bricks[c][r] = { x: 0, y: 0, status: 1 };
+    }
+  }
+  drawBricks();
+  ballX = canvas.width / 2;
+  ballY = canvas.height - 30;
+  dx = 2;
+  dy = -2;
+  paddleX = (canvas.width - paddleWidth) / 2;
+  lives++;
+}
+
+function main() {
+  draw();
   requestAnimationFrame(main);
-};
+}
 
-// Cross-browser support for requestAnimationFrame.
-// Safely ignore this line. It's mostly here for people with old web browsers.
-var w = window;
-requestAnimationFrame = w.requestAnimationFrame || w.webkitRequestAnimationFrame || w.msRequestAnimationFrame || w.mozRequestAnimationFrame;
-
-// Let's play this game!
-loadImages();
-setupKeyboardListeners();
 main();
+
+function startGame() {
+  gameOver = false;
+}

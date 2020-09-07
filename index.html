@@ -1,10 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <title>Best Game Ever!</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Outbreak</title>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+      integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <section class="container game-area">
+      <h1></h1>
+      <canvas id="myCanvas" height="320" width="480"></canvas>
+      <button class="button" id="start-but" onclick="startGame()">
+        Start the Game
+      </button>
+      <button class="button" id="reset-but" onclick="resetGame()">
+        Reset the game
+      </button>
+      <div><ul id="dashboard"></ul></div>
+    </section>
     <script src="game.js"></script>
   </body>
 </html>
